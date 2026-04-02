@@ -22,4 +22,9 @@ class Repository(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # relationships
+    crawl_jobs = relationship("CrawlJob", back_populates="repository")
+    pull_requests = relationship("PullRequest", back_populates="repository")
+    issues = relationship("Issue", back_populates="repository")
+
     
