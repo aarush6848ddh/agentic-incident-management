@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from agents.crawl_agent import run_crawl
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
 import models
@@ -10,7 +11,7 @@ from typing import List
 router = APIRouter(prefix="/crawl-jobs", tags=["crawl-jobs"])
 
 @router.post("/", response_model=CrawlJobResponse)
-def create_crawl_job(crawl_job: CrawlJobCreate, db: Session = Depends(get_db)):
+def create_crawl_job(crawl_job: CrawlJobCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     existing_repo = db.query(Repository).filter(Repository.id == crawl_job.repository_id).first()
     if not existing_repo:
         raise HTTPException(status_code=404, detail="Repository not found")
@@ -18,6 +19,7 @@ def create_crawl_job(crawl_job: CrawlJobCreate, db: Session = Depends(get_db)):
     db.add(new_crawl_job)
     db.commit()
     db.refresh(new_crawl_job)
+    background_tasks.add_task(run_crawl, new_crawl_job.id, crawl_job.repository_id)
     return new_crawl_job
 
 @router.get("/", response_model=List[CrawlJobResponse])
